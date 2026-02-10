@@ -45,46 +45,75 @@ export class MarketDataService {
         try {
             const underlying = ticker === "ALL" ? "SPX" : ticker
             const today = new Date().toISOString().split('T')[0]
+            let targetDate = today
 
             try {
-                // Step 1: Attempt to get Snapshot for Today
-                let response = await this.client.getOptionsChain({
-                    underlyingAsset: underlying,
+                // Step 1: Check if we have contracts for today
+                const checkRes = await this.client.listOptionsContracts({
+                    underlyingTicker: underlying,
                     expirationDate: today,
-                    limit: 100
+                    limit: 1
                 })
 
-                let targetDate = today
-
-                // Step 2: If empty, find the next available expiration
-                if (!response.results || response.results.length === 0) {
+                if (!checkRes.results || checkRes.results.length === 0) {
                     console.log(`No 0DTE results for ${underlying} today. Searching for next available expiration...`)
-
-                    const contracts = await this.client.listOptionsContracts({
-                        underlying_ticker: underlying,
+                    const futureRes = await this.client.listOptionsContracts({
+                        underlyingTicker: underlying,
+                        expirationDateGt: today,
+                        limit: 1,
+                        sort: 'expiration_date',
+                        order: 'asc'
                     })
 
-                    if (contracts.results && contracts.results.length > 0) {
-                        // Find the first expiration date after today
-                        const futureContract = contracts.results.find((c: any) => c.expiration_date > today)
-                        if (futureContract) {
-                            targetDate = futureContract.expiration_date
-                            console.log(`Found next expiration for ${underlying}: ${targetDate}`)
-
-                            response = await this.client.getOptionsChain({
-                                underlyingAsset: underlying,
-                                expirationDate: targetDate,
-                                limit: 100
-                            })
-                        }
+                    if (futureRes.results && futureRes.results.length > 0) {
+                        targetDate = futureRes.results[0].expiration_date
+                        console.log(`Found next expiration for ${underlying}: ${targetDate}`)
+                    } else {
+                        return []
                     }
                 }
 
-                if (response.results && response.results.length > 0) {
-                    return response.results.map((contract: any) => this.mapContractToOpportunity(contract, underlying, targetDate))
-                        .filter((o: any) => o.price > 0.05)
+                // Step 2 & 3: Fetch Calls and Puts separately
+                const [callsRes, putsRes] = await Promise.all([
+                    this.client.getOptionsChain({
+                        underlyingAsset: underlying,
+                        expirationDate: targetDate,
+                        contractType: 'call',
+                        limit: 250
+                    }),
+                    this.client.getOptionsChain({
+                        underlyingAsset: underlying,
+                        expirationDate: targetDate,
+                        contractType: 'put',
+                        limit: 250
+                    })
+                ])
+
+                const allResults = [...(callsRes.results || []), ...(putsRes.results || [])]
+
+                if (allResults.length > 0) {
+                    // Extract underlying price from the first available result
+                    const underlyingPrice = allResults[0].underlying_asset?.price || 0
+
+                    return allResults
+                        .map((contract: any) => this.mapContractToOpportunity(contract, underlying, targetDate))
+                        .filter((o: any) => {
+                            // Filter for price > 0.05 (already done)
+                            if (o.price <= 0.05) return false
+
+                            // Better ATM filtering: Keep strikes within 20% of underlying price
+                            // This removes the "Strike 5 for META" issues while keeping enough range
+                            if (underlyingPrice > 0) {
+                                const percentDiff = Math.abs(o.strike - underlyingPrice) / underlyingPrice
+                                return percentDiff < 0.15
+                            }
+                            return true
+                        })
                         .map((o: any) => this.enrichWithSmartScore(o))
-                        .sort((a: any, b: any) => b.gammaScore - a.gammaScore)
+                        .sort((a: any, b: any) => {
+                            // Primary sort by Gamma Score, but weight distance to ATM if scores are close
+                            return b.gammaScore - a.gammaScore
+                        })
                         .slice(0, 50)
                 }
 

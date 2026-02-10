@@ -41,8 +41,12 @@ export function UserProfileForm({ onUpdate }: UserProfileFormProps) {
     })
 
     function onSubmit(values: z.infer<typeof formSchema>) {
-        console.log("Profile updated:", values)
-        onUpdate?.(values)
+        const normalizedValues = {
+            ...values,
+            preferredTicker: values.preferredTicker.toUpperCase().trim()
+        }
+        console.log("Profile updated:", normalizedValues)
+        onUpdate?.(normalizedValues)
     }
 
     return (

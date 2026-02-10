@@ -36,14 +36,15 @@ export class MarketDataService {
 
     async get0DTEScan(ticker: string = "SPX"): Promise<TradeOpportunity[]> {
         const requireReal = process.env.REQUIRE_REAL_DATA === "true"
+        const normalizedTicker = ticker.toUpperCase().trim()
 
         if (!this.client) {
             console.warn("No Massive API Client initialized")
-            return requireReal ? [] : this.mockScan(ticker)
+            return requireReal ? [] : this.mockScan(normalizedTicker)
         }
 
         try {
-            const underlying = ticker === "ALL" ? "SPX" : ticker
+            const underlying = normalizedTicker === "ALL" ? "SPX" : normalizedTicker
             const today = new Date().toISOString().split('T')[0]
             let targetDate = today
 

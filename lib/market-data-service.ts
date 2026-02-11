@@ -16,6 +16,14 @@ export interface TradeOpportunity {
     conviction: "High" | "Medium" | "Low"
 }
 
+export interface MarketEvent {
+    id: string
+    time: string
+    ticker: string
+    message: string
+    type: "VOLUME" | "NEWS" | "IV"
+}
+
 // Realistic Mock Data for when API fails or is restricted
 const MOCK_OPPORTUNITIES: TradeOpportunity[] = [
     { id: "1", ticker: "SPX", type: "CALL", strike: 5000, price: 2.45, bid: 2.40, ask: 2.50, lastTradeTime: "10:30:05", expirationDate: "2026-02-10", isRealData: false, gammaScore: 92, expMove: "+0.8%", conviction: "High" },
@@ -32,6 +40,36 @@ export class MarketDataService {
     constructor() {
         const apiKey = process.env.POLYGON_API_KEY
         this.client = apiKey ? restClient(apiKey, 'https://api.massive.com') : null
+    }
+
+    async getMarketActivity(): Promise<MarketEvent[]> {
+        if (!this.client) return []
+
+        try {
+            const res = await this.client.getBenzingaV2News({
+                limit: 20
+            })
+
+            if (!res.results) return []
+
+            return res.results.map((news: any) => ({
+                id: news.benzinga_id?.toString() || Math.random().toString(),
+                time: new Date(news.published).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                ticker: news.tickers?.[0] || "MKT",
+                message: news.title,
+                type: this.inferEventType(news)
+            }))
+        } catch (error) {
+            console.error("Failed to fetch market activity:", error)
+            return []
+        }
+    }
+
+    private inferEventType(news: any): "VOLUME" | "NEWS" | "IV" {
+        const text = (news.title + " " + (news.teaser || "")).toLowerCase()
+        if (text.includes("volume") || text.includes("sweep") || text.includes("block")) return "VOLUME"
+        if (text.includes("iv") || text.includes("volatility") || text.includes("gamma")) return "IV"
+        return "NEWS"
     }
 
     async get0DTEScan(ticker: string = "SPX"): Promise<TradeOpportunity[]> {

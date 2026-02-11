@@ -2,6 +2,7 @@
 
 import { UserProfileForm } from "@/components/user-profile-form"
 import { ScannerResults } from "@/components/scanner-results"
+import { Watchlist } from "@/components/watchlist"
 import { LiveMarketFeed } from "@/components/live-market-feed"
 import { useState } from "react"
 
@@ -44,6 +45,8 @@ export default function Home() {
           </div>
 
           <ScannerResults ticker={ticker} />
+
+          <Watchlist />
 
           {/* Placeholder for Chart or P&L Graph */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

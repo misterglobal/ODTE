@@ -10,32 +10,17 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowUpRight, ArrowDownRight, Activity } from "lucide-react"
+import { ArrowUpRight, ArrowDownRight, Activity, PlusCircle, CheckCircle2 } from "lucide-react"
 import { useState, useEffect } from "react"
-
-interface TradeOpportunity {
-    id: string
-    ticker: string
-    type: "CALL" | "PUT"
-    strike: number
-    price: number
-    bid?: number
-    ask?: number
-    lastTradeTime?: string
-    expirationDate: string
-    isRealData: boolean
-    gammaScore: number
-    expMove: string
-    conviction: "High" | "Medium" | "Low"
-}
-
-
+import { useWatchlist, type TradeOpportunity } from "@/lib/watchlist-store"
+import { Button } from "@/components/ui/button"
 
 interface ScannerResultsProps {
     ticker?: string
 }
 
 export function ScannerResults({ ticker = "ALL" }: ScannerResultsProps) {
+    const { watchlist, addToWatchlist } = useWatchlist()
     const [opportunities, setOpportunities] = useState<TradeOpportunity[]>([])
     const [loading, setLoading] = useState(true)
     const [lastUpdated, setLastUpdated] = useState<string | null>(null)
@@ -61,6 +46,8 @@ export function ScannerResults({ ticker = "ALL" }: ScannerResultsProps) {
         const interval = setInterval(fetchScan, 5000) // Poll every 5s
         return () => clearInterval(interval)
     }, [ticker])
+
+    const isAdded = (id: string) => watchlist.some(i => i.id === id)
 
     return (
         <Card className="w-full">
@@ -108,7 +95,8 @@ export function ScannerResults({ ticker = "ALL" }: ScannerResultsProps) {
                                 <TableHead>Exp Date</TableHead>
                                 <TableHead>Smart Score</TableHead>
                                 <TableHead>Exp Move</TableHead>
-                                <TableHead className="text-right">Conviction</TableHead>
+                                <TableHead>Conviction</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -153,7 +141,7 @@ export function ScannerResults({ ticker = "ALL" }: ScannerResultsProps) {
                                     <TableCell className={trade.expMove.startsWith("+") ? "text-green-500" : "text-red-500"}>
                                         {trade.expMove}
                                     </TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell>
                                         <Badge variant={
                                             trade.conviction === "High" ? "default" :
                                                 trade.conviction === "Medium" ? "secondary" : "outline"
@@ -161,11 +149,26 @@ export function ScannerResults({ ticker = "ALL" }: ScannerResultsProps) {
                                             {trade.conviction}
                                         </Badge>
                                     </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-8 w-8 hover:text-primary transition-colors"
+                                            onClick={() => addToWatchlist(trade)}
+                                            disabled={isAdded(trade.id)}
+                                        >
+                                            {isAdded(trade.id) ? (
+                                                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                            ) : (
+                                                <PlusCircle className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
                             ))}
                             {opportunities.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={10} className="text-center h-24 text-muted-foreground">
+                                    <TableCell colSpan={11} className="text-center h-24 text-muted-foreground">
                                         No opportunities found matching criteria.
                                     </TableCell>
                                 </TableRow>

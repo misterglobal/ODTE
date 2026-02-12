@@ -49,7 +49,7 @@ export default function Home() {
 
           <Watchlist />
 
-          <AssistantPanel />
+          <AssistantPanel ticker={ticker} />
 
           {/* Placeholder for Chart or P&L Graph */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

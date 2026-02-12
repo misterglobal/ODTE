@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
 import { Sparkles } from "lucide-react"
 
 type AssistantMessage = {
@@ -13,15 +14,19 @@ type AssistantMessage = {
   disclaimer?: string
 }
 
+interface AssistantPanelProps {
+  ticker: string
+}
+
 const DEFAULT_DISCLAIMER = "Educational only, not financial advice."
 
-export function AssistantPanel() {
+export function AssistantPanel({ ticker }: AssistantPanelProps) {
   const [prompt, setPrompt] = useState("")
   const [loading, setLoading] = useState(false)
   const [messages, setMessages] = useState<AssistantMessage[]>([
     {
       role: "assistant",
-      text: "Ask about options concepts, risk controls, or scenario planning and I will provide educational guidance.",
+      text: `I can help you apply a quantitative 0DTE framework for ${ticker} using live scanner context. Ask about setup quality, risk controls, and scenario planning.`,
       disclaimer: DEFAULT_DISCLAIMER,
     },
   ])
@@ -44,7 +49,10 @@ export function AssistantPanel() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message: cleanedPrompt }),
+        body: JSON.stringify({
+          message: cleanedPrompt,
+          ticker,
+        }),
       })
 
       const data = await response.json()
@@ -83,8 +91,9 @@ export function AssistantPanel() {
           <Sparkles className="h-5 w-5 text-primary" />
           AI Assistant
         </CardTitle>
-        <CardDescription>
-          Educational discussion only. No direct trading instructions are provided.
+        <CardDescription className="flex items-center gap-2">
+          <span>Educational discussion only. No direct trading instructions are provided.</span>
+          <Badge variant="outline">Ticker Context: {ticker}</Badge>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -114,7 +123,7 @@ export function AssistantPanel() {
           <Input
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
-            placeholder="Ask for educational guidance..."
+            placeholder="Ask for a quantitative educational read on current setups..."
           />
           <Button type="submit" disabled={loading}>
             {loading ? "Thinking..." : "Send"}

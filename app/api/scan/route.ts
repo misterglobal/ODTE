@@ -12,7 +12,7 @@ export async function GET(request: Request) {
             data: opportunities,
             timestamp: new Date().toISOString()
         })
-    } catch (error) {
+    } catch (_error) {
         return NextResponse.json({
             success: false,
             error: "Failed to run scan"

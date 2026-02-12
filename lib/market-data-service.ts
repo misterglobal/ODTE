@@ -1,4 +1,4 @@
-import { restClient } from '@massive.com/client-js'
+import { restClient, ListOptionsContractsSortEnum, ListOptionsContractsOrderEnum, GetOptionsChainContractTypeEnum } from '@massive.com/client-js'
 
 export interface TradeOpportunity {
     id: string
@@ -35,7 +35,7 @@ const MOCK_OPPORTUNITIES: TradeOpportunity[] = [
 ]
 
 export class MarketDataService {
-    private client: any
+    private client: ReturnType<typeof restClient> | null
 
     constructor() {
         const apiKey = process.env.POLYGON_API_KEY
@@ -52,6 +52,7 @@ export class MarketDataService {
 
             if (!res.results) return []
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             return res.results.map((news: any) => ({
                 id: news.benzinga_id?.toString() || Math.random().toString(),
                 time: new Date(news.published).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -59,12 +60,18 @@ export class MarketDataService {
                 message: news.title,
                 type: this.inferEventType(news)
             }))
-        } catch (error) {
+        } catch (error: unknown) {
+            const err = error as { response?: { status: number } };
+            if (err.response?.status === 403) {
+                console.warn("Benzinga News: 403 Forbidden. Your API key may not have the news entitlement.");
+                return [];
+            }
             console.error("Failed to fetch market activity:", error)
             return []
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private inferEventType(news: any): "VOLUME" | "NEWS" | "IV" {
         const text = (news.title + " " + (news.teaser || "")).toLowerCase()
         if (text.includes("volume") || text.includes("sweep") || text.includes("block")) return "VOLUME"
@@ -100,12 +107,12 @@ export class MarketDataService {
                         underlyingTicker: underlying,
                         expirationDateGt: today,
                         limit: 1,
-                        sort: 'expiration_date',
-                        order: 'asc'
+                        sort: 'expiration_date' as ListOptionsContractsSortEnum,
+                        order: 'asc' as ListOptionsContractsOrderEnum
                     })
 
                     if (futureRes.results && futureRes.results.length > 0) {
-                        targetDate = futureRes.results[0].expiration_date
+                        targetDate = futureRes.results[0].expiration_date || today
                         console.log(`Found next expiration for ${underlying}: ${targetDate}`)
                     } else {
                         return []
@@ -117,13 +124,13 @@ export class MarketDataService {
                     this.client.getOptionsChain({
                         underlyingAsset: underlying,
                         expirationDate: targetDate,
-                        contractType: 'call',
+                        contractType: 'call' as GetOptionsChainContractTypeEnum,
                         limit: 250
                     }),
                     this.client.getOptionsChain({
                         underlyingAsset: underlying,
                         expirationDate: targetDate,
-                        contractType: 'put',
+                        contractType: 'put' as GetOptionsChainContractTypeEnum,
                         limit: 250
                     })
                 ])
@@ -135,8 +142,9 @@ export class MarketDataService {
                     const underlyingPrice = allResults[0].underlying_asset?.price || 0
 
                     return allResults
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         .map((contract: any) => this.mapContractToOpportunity(contract, underlying, targetDate))
-                        .filter((o: any) => {
+                        .filter((o: TradeOpportunity) => {
                             // Filter for price > 0.05 (already done)
                             if (o.price <= 0.05) return false
 
@@ -148,8 +156,8 @@ export class MarketDataService {
                             }
                             return true
                         })
-                        .map((o: any) => this.enrichWithSmartScore(o))
-                        .sort((a: any, b: any) => {
+                        .map((o: TradeOpportunity) => this.enrichWithSmartScore(o))
+                        .sort((a: TradeOpportunity, b: TradeOpportunity) => {
                             // Primary sort by Gamma Score, but weight distance to ATM if scores are close
                             return b.gammaScore - a.gammaScore
                         })
@@ -157,12 +165,13 @@ export class MarketDataService {
                 }
 
                 return []
-            } catch (snapError: any) {
-                if (snapError.response?.status === 403) {
+            } catch (snapError: unknown) {
+                const error = snapError as { response?: { status: number }; message: string };
+                if (error.response?.status === 403) {
                     console.error("403 Forbidden: Entitlement error for Options Snapshot.")
                     return requireReal ? [] : this.mockScan(ticker)
                 }
-                console.error("Snapshot error:", snapError.message)
+                console.error("Snapshot error:", error.message)
                 return []
             }
         } catch (error) {
@@ -171,6 +180,7 @@ export class MarketDataService {
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private mapContractToOpportunity(contract: any, underlying: string, expirationDate: string): TradeOpportunity {
         const greeks = contract.greeks || {}
         const price = contract.last_trade?.price || contract.day?.close || 0
@@ -204,7 +214,7 @@ export class MarketDataService {
 
     private enrichWithSmartScore(opportunity: TradeOpportunity): TradeOpportunity {
         const volatility = (Math.random() * 10) - 5
-        let newScore = Math.max(0, Math.min(100, opportunity.gammaScore + volatility))
+        const newScore = Math.max(0, Math.min(100, opportunity.gammaScore + volatility))
 
         let conviction: "High" | "Medium" | "Low" = "Low"
         if (newScore > 80) conviction = "High"

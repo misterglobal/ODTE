@@ -31,6 +31,7 @@ interface UserProfileFormProps {
 
 export function UserProfileForm({ onUpdate }: UserProfileFormProps) {
     const form = useForm<z.infer<typeof formSchema>>({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(formSchema) as any,
         defaultValues: {
             riskTolerance: 50,

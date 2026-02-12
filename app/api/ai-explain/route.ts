@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
             data: JSON.parse(text) as StructuredExplanation,
             meta: { source: "openai" }
         })
-    } catch (error) {
+    } catch (error: unknown) {
         console.error("AI explain route failed", error)
         return NextResponse.json({ success: false, error: "Failed to explain setup" }, { status: 500 })
     }

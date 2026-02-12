@@ -9,10 +9,11 @@ export async function GET() {
             success: true,
             data
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("API Route Error (market-activity):", error);
+        const errorMessage = error instanceof Error ? error.message : "Failed to fetch market activity";
         return NextResponse.json(
-            { success: false, error: error.message },
+            { success: false, error: errorMessage },
             { status: 500 }
         );
     }

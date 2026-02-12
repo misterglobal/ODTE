@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowUpRight, ArrowDownRight, Activity, PlusCircle, CheckCircle2 } from "lucide-react"
-import { useState, useEffect } from "react"
+import { Activity, PlusCircle, CheckCircle2, Sparkles } from "lucide-react"
+import { Fragment, useState, useEffect, useCallback } from "react"
 import { useWatchlist, type TradeOpportunity } from "@/lib/watchlist-store"
 import { Button } from "@/components/ui/button"
 
@@ -19,13 +19,24 @@ interface ScannerResultsProps {
     ticker?: string
 }
 
+interface AiExplanation {
+    summary: string[]
+    riskFactors: string[]
+    whatToWatchNext: string[]
+    promptContext?: string
+}
+
 export function ScannerResults({ ticker = "ALL" }: ScannerResultsProps) {
     const { watchlist, addToWatchlist } = useWatchlist()
     const [opportunities, setOpportunities] = useState<TradeOpportunity[]>([])
     const [loading, setLoading] = useState(true)
     const [lastUpdated, setLastUpdated] = useState<string | null>(null)
+    const [activeExplainId, setActiveExplainId] = useState<string | null>(null)
+    const [explainLoadingId, setExplainLoadingId] = useState<string | null>(null)
+    const [explanations, setExplanations] = useState<Record<string, AiExplanation>>({})
+    const [explainError, setExplainError] = useState<string | null>(null)
 
-    const fetchScan = async () => {
+    const fetchScan = useCallback(async () => {
         try {
             const res = await fetch(`/api/scan?ticker=${ticker}`)
             const data = await res.json()
@@ -38,16 +49,53 @@ export function ScannerResults({ ticker = "ALL" }: ScannerResultsProps) {
         } finally {
             setLoading(false)
         }
-    }
-
-    useEffect(() => {
-        setLoading(true) // Reset loading when ticker changes
-        fetchScan()
-        const interval = setInterval(fetchScan, 5000) // Poll every 5s
-        return () => clearInterval(interval)
     }, [ticker])
 
+    useEffect(() => {
+        setLoading(true)
+        fetchScan()
+        const interval = setInterval(fetchScan, 5000)
+        return () => clearInterval(interval)
+    }, [fetchScan])
+
     const isAdded = (id: string) => watchlist.some(i => i.id === id)
+
+    const explainSetup = async (trade: TradeOpportunity) => {
+        setExplainError(null)
+
+        if (activeExplainId === trade.id) {
+            setActiveExplainId(null)
+            return
+        }
+
+        setActiveExplainId(trade.id)
+
+        if (explanations[trade.id]) return
+
+        setExplainLoadingId(trade.id)
+        try {
+            const res = await fetch("/api/ai-explain", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ trade })
+            })
+
+            const data = await res.json()
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || "Failed to explain this setup")
+            }
+
+            setExplanations(prev => ({
+                ...prev,
+                [trade.id]: data.data
+            }))
+        } catch (error) {
+            console.error("Failed to explain setup", error)
+            setExplainError("Couldn't generate setup explanation. Please try again.")
+        } finally {
+            setExplainLoadingId(null)
+        }
+    }
 
     return (
         <Card className="w-full">
@@ -101,70 +149,124 @@ export function ScannerResults({ ticker = "ALL" }: ScannerResultsProps) {
                         </TableHeader>
                         <TableBody>
                             {opportunities.map((trade) => (
-                                <TableRow key={trade.id}>
-                                    <TableCell className="font-medium">{trade.ticker}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={trade.type === "CALL" ? "default" : "destructive"}>
-                                            {trade.type}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>{trade.strike}</TableCell>
-                                    <TableCell>
-                                        <span className="font-bold">${trade.price.toFixed(2)}</span>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground text-xs">
-                                        {trade.bid?.toFixed(2)} / {trade.ask?.toFixed(2)}
-                                    </TableCell>
-                                    <TableCell className="text-xs text-muted-foreground">
-                                        {trade.lastTradeTime || "-"}
-                                    </TableCell>
-                                    <TableCell className="text-xs font-mono">
-                                        {trade.expirationDate.split('-').slice(1).join('/')}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <div className="h-2 w-16 bg-secondary rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full ${trade.gammaScore > 80 ? 'bg-green-500' :
-                                                        trade.gammaScore > 50 ? 'bg-yellow-500' : 'bg-red-500'
-                                                        }`}
-                                                    style={{ width: `${trade.gammaScore}%` }}
-                                                />
+                                <Fragment key={trade.id}>
+                                    <TableRow>
+                                        <TableCell className="font-medium">{trade.ticker}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={trade.type === "CALL" ? "default" : "destructive"}>
+                                                {trade.type}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{trade.strike}</TableCell>
+                                        <TableCell>
+                                            <span className="font-bold">${trade.price.toFixed(2)}</span>
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground text-xs">
+                                            {trade.bid?.toFixed(2)} / {trade.ask?.toFixed(2)}
+                                        </TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">
+                                            {trade.lastTradeTime || "-"}
+                                        </TableCell>
+                                        <TableCell className="text-xs font-mono">
+                                            {trade.expirationDate.split('-').slice(1).join('/')}
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-2 w-16 bg-secondary rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full ${trade.gammaScore > 80 ? 'bg-green-500' :
+                                                            trade.gammaScore > 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                                            }`}
+                                                        style={{ width: `${trade.gammaScore}%` }}
+                                                    />
+                                                </div>
+                                                <span className={`text-xs font-bold ${trade.gammaScore > 80 ? 'text-green-500' :
+                                                    trade.gammaScore > 50 ? 'text-yellow-500' : 'text-red-500'
+                                                    }`}>
+                                                    {trade.gammaScore}
+                                                </span>
                                             </div>
-                                            <span className={`text-xs font-bold ${trade.gammaScore > 80 ? 'text-green-500' :
-                                                trade.gammaScore > 50 ? 'text-yellow-500' : 'text-red-500'
-                                                }`}>
-                                                {trade.gammaScore}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className={trade.expMove.startsWith("+") ? "text-green-500" : "text-red-500"}>
-                                        {trade.expMove}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={
-                                            trade.conviction === "High" ? "default" :
-                                                trade.conviction === "Medium" ? "secondary" : "outline"
-                                        }>
-                                            {trade.conviction}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-8 w-8 hover:text-primary transition-colors"
-                                            onClick={() => addToWatchlist(trade)}
-                                            disabled={isAdded(trade.id)}
-                                        >
-                                            {isAdded(trade.id) ? (
-                                                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                            ) : (
-                                                <PlusCircle className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
+                                        </TableCell>
+                                        <TableCell className={trade.expMove.startsWith("+") ? "text-green-500" : "text-red-500"}>
+                                            {trade.expMove}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant={
+                                                trade.conviction === "High" ? "default" :
+                                                    trade.conviction === "Medium" ? "secondary" : "outline"
+                                            }>
+                                                {trade.conviction}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="h-8"
+                                                    onClick={() => explainSetup(trade)}
+                                                    disabled={explainLoadingId === trade.id}
+                                                >
+                                                    <Sparkles className="h-4 w-4" />
+                                                    {explainLoadingId === trade.id ? "Explaining..." : "Explain this setup"}
+                                                </Button>
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="h-8 w-8 hover:text-primary transition-colors"
+                                                    onClick={() => addToWatchlist(trade)}
+                                                    disabled={isAdded(trade.id)}
+                                                >
+                                                    {isAdded(trade.id) ? (
+                                                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                                    ) : (
+                                                        <PlusCircle className="h-4 w-4" />
+                                                    )}
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                    {activeExplainId === trade.id && (
+                                        <TableRow>
+                                            <TableCell colSpan={11}>
+                                                <div className="rounded-md border bg-muted/30 p-4 space-y-4">
+                                                    {explainError && <p className="text-sm text-red-500">{explainError}</p>}
+                                                    {!explainError && explainLoadingId === trade.id && (
+                                                        <p className="text-sm text-muted-foreground">Analyzing setup and score model context...</p>
+                                                    )}
+                                                    {!explainError && explanations[trade.id] && (
+                                                        <div className="grid gap-4 md:grid-cols-3 text-sm">
+                                                            <div>
+                                                                <h4 className="font-semibold mb-2">Summary</h4>
+                                                                <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
+                                                                    {explanations[trade.id].summary.map((point, idx) => (
+                                                                        <li key={`summary-${idx}`}>{point}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="font-semibold mb-2">Risk factors</h4>
+                                                                <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
+                                                                    {explanations[trade.id].riskFactors.map((point, idx) => (
+                                                                        <li key={`risk-${idx}`}>{point}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="font-semibold mb-2">What to watch next</h4>
+                                                                <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
+                                                                    {explanations[trade.id].whatToWatchNext.map((point, idx) => (
+                                                                        <li key={`watch-${idx}`}>{point}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </Fragment>
                             ))}
                             {opportunities.length === 0 && (
                                 <TableRow>

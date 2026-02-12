@@ -4,6 +4,7 @@ import { UserProfileForm } from "@/components/user-profile-form"
 import { ScannerResults } from "@/components/scanner-results"
 import { Watchlist } from "@/components/watchlist"
 import { LiveMarketFeed } from "@/components/live-market-feed"
+import { AssistantPanel } from "@/components/assistant-panel"
 import { useState } from "react"
 
 export default function Home() {
@@ -47,6 +48,8 @@ export default function Home() {
           <ScannerResults ticker={ticker} />
 
           <Watchlist />
+
+          <AssistantPanel />
 
           {/* Placeholder for Chart or P&L Graph */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

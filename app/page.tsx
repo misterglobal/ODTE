@@ -5,6 +5,7 @@ import { ScannerResults } from "@/components/scanner-results"
 import { Watchlist } from "@/components/watchlist"
 import { LiveMarketFeed } from "@/components/live-market-feed"
 import { OptionsAiAssistant } from "@/components/options-ai-assistant"
+import { AssistantPanel } from "@/components/assistant-panel"
 import { useState } from "react"
 import type { TradeOpportunity } from "@/lib/watchlist-store"
 
@@ -52,6 +53,8 @@ export default function Home() {
           <OptionsAiAssistant selectedContract={selectedContract} />
 
           <Watchlist />
+
+          <AssistantPanel ticker={ticker} />
 
           {/* Placeholder for Chart or P&L Graph */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

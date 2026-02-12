@@ -4,10 +4,13 @@ import { UserProfileForm } from "@/components/user-profile-form"
 import { ScannerResults } from "@/components/scanner-results"
 import { Watchlist } from "@/components/watchlist"
 import { LiveMarketFeed } from "@/components/live-market-feed"
+import { OptionsAiAssistant } from "@/components/options-ai-assistant"
 import { useState } from "react"
+import type { TradeOpportunity } from "@/lib/watchlist-store"
 
 export default function Home() {
   const [ticker, setTicker] = useState("SPX")
+  const [selectedContract, setSelectedContract] = useState<TradeOpportunity | null>(null)
 
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">
@@ -44,7 +47,9 @@ export default function Home() {
             </div>
           </div>
 
-          <ScannerResults ticker={ticker} />
+          <ScannerResults ticker={ticker} onSelectContract={setSelectedContract} />
+
+          <OptionsAiAssistant selectedContract={selectedContract} />
 
           <Watchlist />
 

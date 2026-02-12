@@ -10,16 +10,17 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowUpRight, ArrowDownRight, Activity, PlusCircle, CheckCircle2 } from "lucide-react"
+import { Activity, PlusCircle, CheckCircle2, MessageSquarePlus } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useWatchlist, type TradeOpportunity } from "@/lib/watchlist-store"
 import { Button } from "@/components/ui/button"
 
 interface ScannerResultsProps {
     ticker?: string
+    onSelectContract?: (trade: TradeOpportunity) => void
 }
 
-export function ScannerResults({ ticker = "ALL" }: ScannerResultsProps) {
+export function ScannerResults({ ticker = "ALL", onSelectContract }: ScannerResultsProps) {
     const { watchlist, addToWatchlist } = useWatchlist()
     const [opportunities, setOpportunities] = useState<TradeOpportunity[]>([])
     const [loading, setLoading] = useState(true)
@@ -96,7 +97,7 @@ export function ScannerResults({ ticker = "ALL" }: ScannerResultsProps) {
                                 <TableHead>Smart Score</TableHead>
                                 <TableHead>Exp Move</TableHead>
                                 <TableHead>Conviction</TableHead>
-                                <TableHead className="text-right">Action</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -150,19 +151,31 @@ export function ScannerResults({ ticker = "ALL" }: ScannerResultsProps) {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-8 w-8 hover:text-primary transition-colors"
-                                            onClick={() => addToWatchlist(trade)}
-                                            disabled={isAdded(trade.id)}
-                                        >
-                                            {isAdded(trade.id) ? (
-                                                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                            ) : (
-                                                <PlusCircle className="h-4 w-4" />
-                                            )}
-                                        </Button>
+                                        <div className="flex items-center justify-end gap-1">
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-8 w-8 hover:text-primary transition-colors"
+                                                onClick={() => onSelectContract?.(trade)}
+                                                title="Ask AI about this contract"
+                                            >
+                                                <MessageSquarePlus className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-8 w-8 hover:text-primary transition-colors"
+                                                onClick={() => addToWatchlist(trade)}
+                                                disabled={isAdded(trade.id)}
+                                                title="Add to watchlist"
+                                            >
+                                                {isAdded(trade.id) ? (
+                                                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                                ) : (
+                                                    <PlusCircle className="h-4 w-4" />
+                                                )}
+                                            </Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))}

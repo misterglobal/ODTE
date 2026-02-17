@@ -98,15 +98,18 @@ export async function POST(req: NextRequest) {
             })
         }
 
-        const response = await fetch("https://api.openai.com/v1/responses", {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-                model: "gpt-4.1-mini",
-                input: prompt,
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: "You are a helpful assistant that explains 0DTE options trades." },
+                    { role: "user", content: prompt }
+                ],
                 response_format: {
                     type: "json_schema",
                     json_schema: {
@@ -146,7 +149,7 @@ export async function POST(req: NextRequest) {
         }
 
         const payload = await response.json()
-        const text = payload?.output_text
+        const text = payload?.choices?.[0]?.message?.content
 
         if (!text) {
             return NextResponse.json({

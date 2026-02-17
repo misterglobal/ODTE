@@ -55,7 +55,7 @@ export function ScannerResults({ ticker = "ALL", onSelectContract }: ScannerResu
     useEffect(() => {
         setLoading(true)
         fetchScan()
-        const interval = setInterval(fetchScan, 5000)
+        const interval = setInterval(fetchScan, 15000)
         return () => clearInterval(interval)
     }, [fetchScan])
 
@@ -254,37 +254,37 @@ export function ScannerResults({ ticker = "ALL", onSelectContract }: ScannerResu
                                                         </div>
                                                     )}
                                                     {!explainError && explanations[trade.id] && (
-                                                        <div className="grid gap-8 grid-cols-1 lg:grid-cols-3 text-sm leading-relaxed">
-                                                            <div className="space-y-3">
-                                                                <h4 className="font-bold flex items-center gap-2 text-primary">
-                                                                    <Activity className="h-4 w-4" />
+                                                        <div className="flex flex-col gap-8 text-sm leading-relaxed w-full">
+                                                            <div className="space-y-3 min-w-0">
+                                                                <h4 className="font-bold flex items-center gap-2 text-primary uppercase tracking-wider text-[10px] border-b pb-2">
+                                                                    <Activity className="h-3.5 w-3.5" />
                                                                     Market Logic
                                                                 </h4>
-                                                                <ul className="space-y-2 text-muted-foreground">
+                                                                <ul className="space-y-2.5 text-muted-foreground">
                                                                     {explanations[trade.id].summary.map((point, idx) => (
-                                                                        <li key={`summary-${idx}`} className="list-disc ml-4 pl-1">{point}</li>
+                                                                        <li key={`summary-${idx}`} className="list-disc ml-4 pl-1 break-words">{point}</li>
                                                                     ))}
                                                                 </ul>
                                                             </div>
-                                                            <div className="space-y-3 lg:border-l lg:pl-8">
-                                                                <h4 className="font-bold flex items-center gap-2 text-red-500">
-                                                                    <Activity className="h-4 w-4" />
+                                                            <div className="space-y-3 min-w-0">
+                                                                <h4 className="font-bold flex items-center gap-2 text-red-500 uppercase tracking-wider text-[10px] border-b pb-2">
+                                                                    <Activity className="h-3.5 w-3.5" />
                                                                     Risk Factors
                                                                 </h4>
-                                                                <ul className="space-y-2 text-muted-foreground">
+                                                                <ul className="space-y-2.5 text-muted-foreground">
                                                                     {explanations[trade.id].riskFactors.map((point, idx) => (
-                                                                        <li key={`risk-${idx}`} className="list-disc ml-4 pl-1">{point}</li>
+                                                                        <li key={`risk-${idx}`} className="list-disc ml-4 pl-1 break-words">{point}</li>
                                                                     ))}
                                                                 </ul>
                                                             </div>
-                                                            <div className="space-y-3 lg:border-l lg:pl-8">
-                                                                <h4 className="font-bold flex items-center gap-2 text-green-500">
-                                                                    <Activity className="h-4 w-4" />
+                                                            <div className="space-y-3 min-w-0">
+                                                                <h4 className="font-bold flex items-center gap-2 text-green-500 uppercase tracking-wider text-[10px] border-b pb-2">
+                                                                    <Activity className="h-3.5 w-3.5" />
                                                                     Execution Plan
                                                                 </h4>
-                                                                <ul className="space-y-2 text-muted-foreground">
+                                                                <ul className="space-y-2.5 text-muted-foreground">
                                                                     {explanations[trade.id].whatToWatchNext.map((point, idx) => (
-                                                                        <li key={`watch-${idx}`} className="list-disc ml-4 pl-1">{point}</li>
+                                                                        <li key={`watch-${idx}`} className="list-disc ml-4 pl-1 break-words">{point}</li>
                                                                     ))}
                                                                 </ul>
                                                             </div>

@@ -188,10 +188,11 @@ export class MarketDataService {
         const lastQuote = contract.last_quote || {}
         const lastTrade = contract.last_trade || {}
 
+        const type = contract.details?.contract_type?.toUpperCase() || "CALL"
         return {
-            id: contract.details?.contract_type + strike,
+            id: type + strike,
             ticker: underlying,
-            type: contract.details?.contract_type?.toUpperCase() || "CALL",
+            type,
             strike,
             price,
             bid: lastQuote.bid,
@@ -213,16 +214,19 @@ export class MarketDataService {
     }
 
     private enrichWithSmartScore(opportunity: TradeOpportunity): TradeOpportunity {
-        const volatility = (Math.random() * 10) - 5
-        const newScore = Math.max(0, Math.min(100, opportunity.gammaScore + volatility))
+        // Removed random volatility to ensure UI stability
+        // const volatility = (Math.random() * 10) - 5
+        // const newScore = Math.max(0, Math.min(100, opportunity.gammaScore + volatility))
+
+        const score = opportunity.gammaScore
 
         let conviction: "High" | "Medium" | "Low" = "Low"
-        if (newScore > 80) conviction = "High"
-        else if (newScore > 50) conviction = "Medium"
+        if (score > 80) conviction = "High"
+        else if (score > 50) conviction = "Medium"
 
         return {
             ...opportunity,
-            gammaScore: Math.round(newScore),
+            gammaScore: score,
             conviction
         }
     }

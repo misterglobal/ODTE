@@ -8,13 +8,14 @@ import { OptionsAiAssistant } from "@/components/options-ai-assistant"
 import { AssistantPanel } from "@/components/assistant-panel"
 import { useState } from "react"
 import type { TradeOpportunity } from "@/lib/watchlist-store"
+import Link from "next/link"
 
 export default function Home() {
   const [ticker, setTicker] = useState("SPX")
   const [selectedContract, setSelectedContract] = useState<TradeOpportunity | null>(null)
 
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground">
+    <div className="min-h-screen bg-background font-sans text-foreground flex flex-col">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -25,14 +26,14 @@ export default function Home() {
             <h1 className="text-2xl font-bold tracking-tighter">0DTE Scanner</h1>
           </div>
           <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
-            <a href="#" className="hover:text-foreground transition-colors">Dashboard</a>
-            <a href="#" className="hover:text-foreground transition-colors">History</a>
-            <a href="#" className="hover:text-foreground transition-colors">Settings</a>
+            <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
+            <Link href="#" className="hover:text-foreground transition-colors">History</Link>
+            <Link href="#" className="hover:text-foreground transition-colors">Settings</Link>
           </nav>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <main className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 flex-grow">
         {/* Left Column: Controls & Feed (3 cols) */}
         <div className="lg:col-span-3 space-y-6">
           <UserProfileForm onUpdate={(vals) => setTicker(vals.preferredTicker)} />
@@ -66,6 +67,22 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t bg-card/20 py-8">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <div className="h-5 w-5 bg-primary/20 rounded flex items-center justify-center font-bold text-xs">
+              0
+            </div>
+            <span>&copy; 2026 0DTE Scanner. All rights reserved.</span>
+          </div>
+          <div className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
+            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
